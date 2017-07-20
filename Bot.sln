@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
@@ -19,18 +18,18 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Func", "%USERPROFILE%\AppDa
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{36665A78-4D93-48C7-B432-4DA46AA140D5}"
 	ProjectSection(SolutionItems) = preProject
-		commands.json = commands.json
-		debughost.cmd = debughost.cmd
-		readme.md = readme.md
+		Bot\commands.json = Bot\commands.json
+		Bot\debughost.cmd = Bot\debughost.cmd
+		Bot\readme.md = Bot\readme.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "messages", "messages", "{F4D9DF3B-F4E4-4E19-9053-3AF71A3189FA}"
 	ProjectSection(SolutionItems) = preProject
-		messages\BasicLuisDialog.csx = messages\BasicLuisDialog.csx
-		messages\function.json = messages\function.json
-		messages\project.json = messages\project.json
-		messages\project.lock.json = messages\project.lock.json
-		messages\run.csx = messages\run.csx
+		Bot\messages\BasicLuisDialog.csx = Bot\messages\BasicLuisDialog.csx
+		Bot\messages\function.json = Bot\messages\function.json
+		Bot\messages\project.json = Bot\messages\project.json
+		Bot\messages\project.lock.json = Bot\messages\project.lock.json
+		Bot\messages\run.csx = Bot\messages\run.csx
 	EndProjectSection
 EndProject
 Global
