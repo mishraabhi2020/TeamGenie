@@ -2,7 +2,8 @@
   "frameworks": {
     "net46":{
       "dependencies": {
-        "Microsoft.Bot.Builder.Azure": "3.2.2"
+        "Microsoft.Bot.Builder.Azure": "3.2.2",
+        "Microsoft.Azure.Search":  "4.0.0-preview"
       }
     }
    }
