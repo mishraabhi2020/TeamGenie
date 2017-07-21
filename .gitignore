@@ -3,3 +3,12 @@
 
 # User-specific files
 *.suo
+/packages
+/Search.Azure/bin
+/Search.Azure/obj
+/Search.Contracts/bin
+/Search.Dialogs/obj
+/Search.Contracts/bin
+/Search.Dialogs/obj
+/Search.Contracts/obj/Debug
+/Search.Dialogs/bin/Debug
