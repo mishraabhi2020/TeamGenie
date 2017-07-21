@@ -1,5 +1,4 @@
 #r "Newtonsoft.Json"
-#r "Microsoft.Azure.Search"
 #load "BasicLuisDialog.csx"
 
 using System;
