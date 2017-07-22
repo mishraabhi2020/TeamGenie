@@ -1,4 +1,4 @@
-#load "QnAMakerresult.csx"
+#load "QnAMakerResult.csx"
 
 using System;
 using System.Threading.Tasks;
