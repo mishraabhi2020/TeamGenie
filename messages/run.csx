@@ -5,7 +5,6 @@ using System;
 using System.Net;
 using System.Threading;
 using Newtonsoft.Json;
-
 using Microsoft.Bot.Builder.Azure;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
