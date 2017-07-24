@@ -1,5 +1,5 @@
 #r "Newtonsoft.Json"
-#load "BasicLuisDialog.csx"
+#load "LuisDialog.csx"
 #load "QnADialog.csx"
 
 using System;
