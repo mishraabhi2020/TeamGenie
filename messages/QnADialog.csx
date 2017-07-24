@@ -24,9 +24,8 @@ public class QnADialog : IDialog<string>
 
         if (activity.Text.Equals("Yes"))
         {
-            var reply = activity.CreateReply("Your next message will be posted as answer to the question. Go ahead.");
-            await context.SayAsync(speak: "Your next message will be posted as answer to the question. Go ahead.");
-            await client.Conversations.SendToConversationAsync(reply);
+            await context.SayAsync(speak: "Your next message will be posted as answer to the question. Go ahead.", 
+                text: "Your next message will be posted as answer to the question. Go ahead.");
             context.Wait(RetrainQnAModelAsync(query));
         }
         context.Done(userResponse);
@@ -79,9 +78,9 @@ public class QnADialog : IDialog<string>
             };
             await httpClient.SendAsync(request);
 
-            await context.SayAsync(speak: "You contributed an answer. Thanks!");
+            await context.SayAsync(speak: "You contributed an answer. Thanks!",
+                                        text: "You contributed an answer. Thanks!");
             Activity newMessage = activity.CreateReply("You contributed an answer. Thanks!");
-            await activity.CreateReply(newMessage);
             context.Done(newMessage);
         }
     }
@@ -131,7 +130,6 @@ public class QnADialog : IDialog<string>
         await client.Conversations.SendToConversationAsync(newMessage);
 
         //Retraining QnA Model
-        await context.SayAsync(speak: "If this did not help you, you can train me by providing the right answer. Would you like to?");
         newMessage = activity.CreateReply("If this did not help you, you can train me by providing the right answer. Would you like to?");
         newMessage.Type = ActivityTypes.Message;
         newMessage.TextFormat = TextFormatTypes.Plain;
