@@ -9,11 +9,10 @@ using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Newtonsoft.Json;
 
-// For more information about this template visit http://aka.ms/azurebots-csharp-luis
 [Serializable]
-public class BasicLuisDialog : LuisDialog<object>
+public class LuisDialog : LuisDialog<object>
 {
-    public BasicLuisDialog() : base(new LuisService(new LuisModelAttribute(Utils.GetAppSetting("LuisAppId"), Utils.GetAppSetting("LuisAPIKey"))))
+    public LuisDialog() : base(new LuisService(new LuisModelAttribute(Utils.GetAppSetting("LuisAppId"), Utils.GetAppSetting("LuisAPIKey"))))
     {
     }
 
@@ -25,9 +24,10 @@ public class BasicLuisDialog : LuisDialog<object>
     }
 
     [LuisIntent("Query")]
-    public async Task<string> QueryIntent(IDialogContext context, LuisResult result)
+    public async Task<LuisResult> QueryIntent(IDialogContext context, LuisResult result)
     {
-        return "QnAQuery";
+        context.Done();
+        return result;
     }
 
     // Go to https://luis.ai and create a new intent, then train/publish your luis app.
