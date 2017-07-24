@@ -9,6 +9,68 @@ using Microsoft.Bot.Builder.Azure;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
 
+public async Task QueryQnA(Activity activity)
+{
+    string responseString = string.Empty;
+    var query = result.Query; //User Query
+    var knowledgebaseId = Utils.GetAppSetting("QnAKnowledgeBaseId");
+    var qnamakerSubscriptionKey = Utils.GetAppSetting("QnASubscriptionKey");
+    var client = new ConnectorClient(new Uri(activity.ServiceUrl));
+
+    //Build the URI
+    Uri qnamakerUriBase = new Uri("https://westus.api.cognitive.microsoft.com/qnamaker/v1.0");
+    var builder = new UriBuilder($"{qnamakerUriBase}/knowledgebases/{knowledgebaseId}/generateAnswer");
+
+    //Add question as part of the body
+    var postBody = $"{{\"question\": \"{query}\"}}";
+
+    //Send the POST request to QnAMaker API
+    using (WebClient webClient = new WebClient())
+    {
+        //Set the encoding to UTF8
+        webClient.Encoding = System.Text.Encoding.UTF8;
+
+        //Add the subscription key header
+        webClient.Headers.Add("Ocp-Apim-Subscription-Key", qnamakerSubscriptionKey);
+        webClient.Headers.Add("Content-Type", "application/json");
+        responseString = webClient.UploadString(builder.Uri, postBody);
+    }
+
+    //De-serialize the response
+    QnAMakerResult response;
+    try
+    {
+        response = JsonConvert.DeserializeObject<QnAMakerResult>(responseString);
+    }
+    catch
+    {
+        throw new Exception("Unable to deserialize QnA Maker response string.");
+    }
+    await context.PostAsync($"{response.Answer}");
+
+    //Retraining QnA Model
+    var reply = activity.CreateReply("If this did not help you, you can train me by providing the right answer. Would you like to?");
+    reply.Type = ActivityTypes.Message;
+    reply.TextFormat = TextFormatTypes.Plain;
+
+    reply.SuggestedActions = new SuggestedActions()
+    {
+        Actions = new List<CardAction>()
+            {
+                new CardAction(){ Title = "Yes", Type=ActionTypes.ImBack, Value="Yes" },
+                new CardAction(){ Title = "No", Type=ActionTypes.ImBack, Value="No" }
+            }
+    };
+    await client.Conversations.ReplyToActivityAsync(reply);
+    context.Wait(MessageReceived);
+    if (reply.Value.Equals("Yes"))
+    {
+        reply = activity.CreateReply("Your next message will be posted as answer to the question. Go ahead.");
+        await client.Conversations.ReplyToActivityAsync(reply);
+        context.Wait(MessageReceived);
+        await context.PostAsync($"You provided an answer. You said: {reply.Value}");
+    }
+}
 public static async Task<object> Run(HttpRequestMessage req, TraceWriter log)
 {
     log.Info($"Webhook was triggered!");
@@ -33,7 +95,12 @@ public static async Task<object> Run(HttpRequestMessage req, TraceWriter log)
             switch (activity.GetActivityType())
             {
                 case ActivityTypes.Message:
-                    await Conversation.SendAsync(activity, () => new BasicLuisDialog());
+                    string bTask = await Conversation.SendAsync(activity, () => new BasicLuisDialog());
+                    switch(bTask)
+                    {
+                        case "QnAQuery":
+                            await QnAQueryAsync(activity);
+                    }
                     break;
                 case ActivityTypes.ConversationUpdate:
                     var client = new ConnectorClient(new Uri(activity.ServiceUrl));
