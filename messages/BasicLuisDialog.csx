@@ -20,7 +20,7 @@ public class BasicLuisDialog : LuisDialog<object>
     [LuisIntent("None")]
     public async Task NoneIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the none intent. You said: {result.Query}"); //
+        await context.PostAsync($"You have reached the none intent. You said: {result.Query}");
         context.Wait(MessageReceived);
     }
 
@@ -62,8 +62,27 @@ public class BasicLuisDialog : LuisDialog<object>
         {
             throw new Exception("Unable to deserialize QnA Maker response string.");
         }
-
         await context.PostAsync($"{response.Answer}");
+
+        //Retraining QnA Model
+        var reply = activity.CreateReply("If this did not help you, you can train me by providing the right answer. Would you like to?");
+        reply.Type = ActivityTypes.Message;
+        reply.TextFormat = TextFormatTypes.Plain;
+
+        reply.SuggestedActions = new SuggestedActions()
+        {
+            Actions = new List<CardAction>()
+            {
+                new CardAction(){ Title = "Yes", Type=ActionTypes.ImBack, Value="Yes" },
+                new CardAction(){ Title = "No", Type=ActionTypes.ImBack, Value="No" }
+            }
+        };
+        if(reply.Value.Equals("Yes"))
+        {
+            reply = activity.CreateReply("Your next message will be posted as answer to the question. Go ahead.");
+            context.Wait(MessageReceived);
+            await context.PostAsync($"You provided an answer. You said: {reply.Value}");
+        }
         context.Wait(MessageReceived);
     }
 
