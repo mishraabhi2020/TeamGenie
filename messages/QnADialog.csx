@@ -5,41 +5,88 @@ using Microsoft.Bot.Builder.Azure;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
+using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
+using System.Text;
 
 [Serializable]
-public class NameDialog : IDialog<string>
+public class QnADialog : IDialog<string>
 {
-    public async Task StartAsync(IDialogContext context)
+    public async Task StartAsync(IDialogContext context, LuisResult result)
     {
-        context.Wait(this.MessageReceivedAsync);
+        context.Wait(this.MessageReceivedAsync(result));
     }
 
-    private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result)
+    private async Task CheckTrainingRequired(IDialogContext context, IAwaitable<object> result)
     {
         var activity = await result as Activity;
-        /*
-        if ((message.Text != null) && (message.Text.Trim().Length > 0))
+        if (activity.Text.Equals("Yes"))
         {
-            context.Done(message.Text);
+            var reply = activity.CreateReply("Your next message will be posted as answer to the question. Go ahead.");
+            await client.Conversations.SendToConversationAsync(reply);
+            context.Wait(RetrainQnAModelAsync);
         }
-        else
-        {
-            --attempts;
-            if (attempts > 0)
-            {
-                await context.PostAsync("I'm sorry, I don't understand your reply. What is your name (e.g. 'Bill', 'Melinda')?");
+        await context.Done(userResponse);
+    }
+    private async Task RetrainQnAModelAsync(IDialogContext context, IAwaitable<object> result)
+    {
+        var activity = await result as Activity;
+        var knowledgebaseId = Utils.GetAppSetting("QnAKnowledgeBaseId");
+        var qnamakerSubscriptionKey = Utils.GetAppSetting("QnASubscriptionKey");
 
-                context.Wait(this.MessageReceivedAsync);
-            }
-            else
+        //Build the URI for updating knowledge base
+        var qnamakerUriBase = new Uri("https://westus.api.cognitive.microsoft.com/qnamaker/v2.0");
+        var builder = new UriBuilder($"{qnamakerUriBase}/knowledgebases/{knowledgebaseId}");
+
+        //Add question and answer as part of the body
+        var postBody = "{{\"add\":{\"qnaPairs\":[{\"answer\": \"" + reply.Value + "\",\"question\": \"" + result.Query + "\"}],\"urls\":[]}}}";
+        var byteData = Encoding.UTF8.GetBytes(postBody);
+        var content = new ByteArrayContent(byteData);
+
+        //Send API request to QnAMaker API
+        using (HttpClient httpClient = new HttpClient())
+        {
+            //Add request headers
+            httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", qnamakerSubscriptionKey);
+            httpClient.DefaultRequestHeaders.Add("Content-Type", "application/json");
+
+            //Update Knowledgebase
+            HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), builder.Uri)
             {
-                context.Fail(new TooManyAttemptsException("Message was not a string or was an empty string."));
-            }
-        }*/
-        var connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                Content = content
+            };
+            await httpClient.SendAsync(request);
+
+            //Train the Model
+            builder = new UriBuilder($"{qnamakerUriBase}/knowledgebases/{knowledgebaseId}/train");
+            postBody = "{}";
+            byteData = Encoding.UTF8.GetBytes(postBody);
+            content = new ByteArrayContent(byteData);
+
+            request = new HttpRequestMessage(new HttpMethod("PATCH"), builder.Uri)
+            {
+                Content = content
+            };
+            await httpClient.SendAsync(request);
+
+            //Publish trained model
+            request = new HttpRequestMessage(new HttpMethod("PUT"), builder.Uri)
+            {
+                Content = content
+            };
+            await httpClient.SendAsync(request);
+
+            Activity newMessage = activity.CreateReply($"You contributed an answer. Thanks!");
+            await activity.CreateReply(newMessage);
+            context.Done(newMessage);
+        }
+    }
+    private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result, LuisResult lResult)
+    {
+        var activity = await result as Activity;
+
         HttpResponseMessage response;
-        var query = result.Query; //User Query
+        var query = lResult.Query; //User Query
         var knowledgebaseId = Utils.GetAppSetting("QnAKnowledgeBaseId");
         var qnamakerSubscriptionKey = Utils.GetAppSetting("QnASubscriptionKey");
         var client = new ConnectorClient(new Uri(activity.ServiceUrl));
@@ -78,6 +125,22 @@ public class NameDialog : IDialog<string>
         }
         Activity newMessage = activity.CreateReply($"{QnAResponse.Answer}");
         await connector.Conversations.SendToConversationAsync(newMessage);
+
+        //Retraining QnA Model
+        newMessage = activity.CreateReply("If this did not help you, you can train me by providing the right answer. Would you like to?");
+        newMessage.Type = ActivityTypes.Message;
+        newMessage.TextFormat = TextFormatTypes.Plain;
+
+        newMessage.SuggestedActions = new SuggestedActions()
+        {
+            Actions = new List<CardAction>()
+                {
+                    new CardAction(){ Title = "Yes", Type=ActionTypes.ImBack, Value="Yes" },
+                    new CardAction(){ Title = "No", Type=ActionTypes.ImBack, Value="No" }
+                }
+        };
+        await client.Conversations.SendToConversationAsync(newMessage);
+        context.Wait(CheckTrainingRequired);
 
     }
 }
