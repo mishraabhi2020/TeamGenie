@@ -26,7 +26,7 @@ public class QnADialog : IDialog<string>
         {
             await context.SayAsync(speak: "Your next message will be posted as answer to the question. Go ahead.", 
                 text: "Your next message will be posted as answer to the question. Go ahead.");
-            context.Wait(RetrainQnAModelAsync(activity, query));
+            context.Wait(RetrainQnAModelAsync(context, activity, query));
         }
         context.Done(userResponse);
     }
@@ -143,7 +143,7 @@ public class QnADialog : IDialog<string>
                 }
         };
         await client.Conversations.SendToConversationAsync(newMessage);
-        context.Wait(CheckTrainingRequired(activity, query));
+        context.Wait(CheckTrainingRequired(context, activity, query));
 
     }
 }
