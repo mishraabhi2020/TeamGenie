@@ -7,6 +7,7 @@ using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
+using System.Text;
 
 [Serializable]
 public class QnADialog : IDialog<string>
@@ -25,7 +26,7 @@ public class QnADialog : IDialog<string>
             await client.Conversations.SendToConversationAsync(reply);
             context.Wait(RetrainQnAModelAsync);
         }
-        context.Done(userResponse);
+        await context.Done(userResponse);
     }
     private async Task RetrainQnAModelAsync(IDialogContext context, IAwaitable<object> result)
     {

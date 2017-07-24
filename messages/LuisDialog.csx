@@ -25,10 +25,9 @@ public class LuisDialog : LuisDialog<object>
     }
 
     [LuisIntent("Query")]
-    public async Task<LuisResult> QueryIntent(IDialogContext context, LuisResult result)
+    public async Task QueryIntent(IDialogContext context, LuisResult result)
     {
-        context.Done(result);
-        return result;
+        await context.Done(result);
     }
     
 }
