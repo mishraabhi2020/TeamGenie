@@ -12,23 +12,26 @@ using System.Text;
 [Serializable]
 public class QnADialog : IDialog<string>
 {
-    public async Task StartAsync(IDialogContext context, LuisResult result)
+    public async Task StartAsync(IDialogContext context)
     {
-        context.Wait(this.MessageReceivedAsync(result));
+        //context.Wait(this.MessageReceivedAsync);
     }
 
-    private async Task CheckTrainingRequired(IDialogContext context, IAwaitable<object> result)
+    private async Task CheckTrainingRequired(IDialogContext context, IAwaitable<object> result, string query)
     {
         var activity = await result as Activity;
+        var client = new ConnectorClient(new Uri(activity.ServiceUrl));
+
         if (activity.Text.Equals("Yes"))
         {
             var reply = activity.CreateReply("Your next message will be posted as answer to the question. Go ahead.");
+            await context.SayAsync(speak: "Your next message will be posted as answer to the question. Go ahead.");
             await client.Conversations.SendToConversationAsync(reply);
-            context.Wait(RetrainQnAModelAsync);
+            context.Wait(RetrainQnAModelAsync(query));
         }
-        await context.Done(userResponse);
+        context.Done(userResponse);
     }
-    private async Task RetrainQnAModelAsync(IDialogContext context, IAwaitable<object> result)
+    private async Task RetrainQnAModelAsync(IDialogContext context, IAwaitable<object> result, string query)
     {
         var activity = await result as Activity;
         var knowledgebaseId = Utils.GetAppSetting("QnAKnowledgeBaseId");
@@ -39,7 +42,7 @@ public class QnADialog : IDialog<string>
         var builder = new UriBuilder($"{qnamakerUriBase}/knowledgebases/{knowledgebaseId}");
 
         //Add question and answer as part of the body
-        var postBody = "{{\"add\":{\"qnaPairs\":[{\"answer\": \"" + reply.Value + "\",\"question\": \"" + result.Query + "\"}],\"urls\":[]}}}";
+        var postBody = "{{\"add\":{\"qnaPairs\":[{\"answer\": \"" + result.Value + "\",\"question\": \"" + query + "\"}],\"urls\":[]}}}";
         var byteData = Encoding.UTF8.GetBytes(postBody);
         var content = new ByteArrayContent(byteData);
 
@@ -76,17 +79,18 @@ public class QnADialog : IDialog<string>
             };
             await httpClient.SendAsync(request);
 
-            Activity newMessage = activity.CreateReply($"You contributed an answer. Thanks!");
+            await context.SayAsync(speak: "You contributed an answer. Thanks!");
+            Activity newMessage = activity.CreateReply("You contributed an answer. Thanks!");
             await activity.CreateReply(newMessage);
             context.Done(newMessage);
         }
     }
-    private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result, LuisResult lResult)
+    private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result, string query)
     {
         var activity = await result as Activity;
 
         HttpResponseMessage response;
-        var query = lResult.Query; //User Query
+        //var query = lResult.Query; //User Query
         var knowledgebaseId = Utils.GetAppSetting("QnAKnowledgeBaseId");
         var qnamakerSubscriptionKey = Utils.GetAppSetting("QnASubscriptionKey");
         var client = new ConnectorClient(new Uri(activity.ServiceUrl));
@@ -124,9 +128,10 @@ public class QnADialog : IDialog<string>
             throw new Exception("Unable to deserialize QnA Maker response string.");
         }
         Activity newMessage = activity.CreateReply($"{QnAResponse.Answer}");
-        await connector.Conversations.SendToConversationAsync(newMessage);
+        await client.Conversations.SendToConversationAsync(newMessage);
 
         //Retraining QnA Model
+        await context.SayAsync(speak: "If this did not help you, you can train me by providing the right answer. Would you like to?");
         newMessage = activity.CreateReply("If this did not help you, you can train me by providing the right answer. Would you like to?");
         newMessage.Type = ActivityTypes.Message;
         newMessage.TextFormat = TextFormatTypes.Plain;
@@ -140,7 +145,7 @@ public class QnADialog : IDialog<string>
                 }
         };
         await client.Conversations.SendToConversationAsync(newMessage);
-        context.Wait(CheckTrainingRequired);
+        context.Wait(CheckTrainingRequired(query));
 
     }
 }

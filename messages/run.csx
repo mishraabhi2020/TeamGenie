@@ -39,7 +39,6 @@ public static async Task<object> Run(HttpRequestMessage req, TraceWriter log)
             {
                 case ActivityTypes.Message:
                     await Conversation.SendAsync(activity, () => new LuisDialog());
-                    await Conversation.SendAsync(activity, () => new QnADialog(result));
                     break;
                 case ActivityTypes.ConversationUpdate:
                     var client = new ConnectorClient(new Uri(activity.ServiceUrl));
