@@ -9,6 +9,7 @@ using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
+using Microsoft.Bot.Builder.Dialogs.Internals;
 
 [Serializable]
 public class LuisDialog : LuisDialog<object>
@@ -29,7 +30,7 @@ public class LuisDialog : LuisDialog<object>
     {
         var message = await activity;
         var dialog = new QnADialog();
-        await context.Forward(dialog, dialog.MessageReceived(result.Query), message, CancellationToken.None);
+        await context.Forward(dialog, dialog.MessageReceived(dialog, message, result.Query), message, CancellationToken.None);
     }
     
 }
