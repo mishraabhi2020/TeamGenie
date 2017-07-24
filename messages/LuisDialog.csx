@@ -28,7 +28,8 @@ public class LuisDialog : LuisDialog<object>
     public async Task QueryIntent(IDialogContext context, IAwaitable<IMessageActivity> activity, LuisResult result)
     {
         var message = await activity;
-        await context.Forward(new QnADialog(), MessageReceived(result.Query), message, CancellationToken.None);
+        var dialog = new QnADialog();
+        await context.Forward(dialog, dialog.MessageReceived(result.Query), message, CancellationToken.None);
     }
     
 }
